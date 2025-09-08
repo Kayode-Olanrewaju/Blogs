@@ -1,0 +1,64 @@
+            Untangling Kubernetes Networking: eBPF, VXLAN, and BGP in Action
+
+Kubernetes networking is like plumbing for containers. You don’t always see it, but if it’s done wrong, the whole house floods. At its core, Kubernetes delegates the “pipe-laying” job to something called a Container Network Interface (CNI). CNIs are plugins that decide how pods talk to each other, to services, and to the outside world.
+
+The fun part? Different CNIs implement networking in very different ways. Let’s walk through three major approaches: overlay networks (VXLAN), routing with BGP, and kernel-native eBPF. Along the way, we’ll name which plugins use them, why you might pick each, and how this all maps back to concepts we know from virtual private clouds (VPCs).
+
+            Overlay Networking (VXLAN) — Wrapping Pods in Tunnels
+The most common way to build the pod network is as a simple overlay network that all pods connects and communicates on that hides any complexity that might exist between cluster nodes.Imagine you’ve got apartments in different buildings but want them to feel like they’re all on the same floor.VXLAN (Virtual Extensible LAN) does exactly that: it encapsulates pod traffic inside UDP packets and tunnels them across nodes.It acts like a layer 3 switch ontop of the layer 3 infrastructure.
+
+   Plugins using VXLAN:
+Flannel (classic choice for small/simple clusters)
+Weave Net (adds mesh gossip on top of VXLAN)
+Canal (Flannel for connectivity + Calico for policies)
+
+   Why choose VXLAN CNIs?
+Dead simple to set up, great for smaller clusters or labs.
+Doesn’t require deep networking knowledge or re-architecting subnets.
+Trade-off: extra encapsulation means more overhead and slightly lower throughput.
+                                     
+            BGP Routing — Let the Network Do the Work
+BGP (Border Gateway Protocol) is the same protocol that makes the Internet’s routers talk to each other. With BGP-driven CNIs, each Kubernetes node advertises pod CIDRs as if it were an ISP router. Packets travel directly—no overlays, no tunnels,no encapsulation.
+
+   Plugin using BGP:
+Calico (by default avoids encapsulation and relies on BGP, though it can fall back to VXLAN if needed)
+
+    Why choose a BGP CNI?
+Best for large clusters needing performance and scalability.
+Packets move at native network speed—no VXLAN tax.
+More complex, requires your network infrastructure (or cloud VPC) to handle routing.
+
+            eBPF — Networking Meets Kernel Superpowers
+eBPF (extended Berkeley Packet Filter) is like programmable Lego blocks inside the Linux kernel. Instead of routing packets through iptables rules or VXLAN tunnels, eBPF lets the kernel itself handle pod networking, policies, and even Layer 7 inspection.
+   
+   Plugin using eBPF
+Cilium
+   Why choose eBPF CNIs?
+Extreme performance: fewer context switches, near-zero overhead.
+Security: deep observability and fine-grained network policies.
+Future-proof: eBPF is quickly replacing legacy iptables-based dataplanes.
+Trade-off: more moving parts, newer tech (bleeding edge vs battle-tested).
+
+                                CNIs in Managed Kubernetes
+If you’re using cloud providers, you’re automatically using their favorite CNIs—unless you override them.
+
+- Amazon EKS: Uses the Amazon VPC CNI, which assigns pods real VPC IPs via ENIs (Elastic Network Interfaces). This is unique—pods are “first-class citizens” in the VPC.
+
+- Google GKE: Defaults to kubenet or GKE VPC-native networking (also using VPC-IP assignment). Many teams layer Calico on top for policies.
+
+- Azure AKS: Offers Azure CNI (pods get Azure VNet IPs) or kubenet.
+
+Notice the theme? Cloud CNIs prefer native IP assignment (no VXLAN), because it makes pods look and behave like regular VMs in the VPC.
+
+                               So, Which Should You Choose?
+
+- VXLAN overlays (Flannel/Weave) → Great for labs, simple clusters, low-stress networking.
+- BGP (Calico) → Perfect if you need scale, high throughput, and you can integrate with your routers or VPC.
+- eBPF (Cilium) → Cutting-edge, performance-driven setups with strong security needs.
+                                      In managed clouds:
+Stick with the cloud provider’s CNI if you want the simplest integration with IAM, Security Groups, and routing.
+Add Calico or Cilium if you want advanced network policies or observability.
+                                 
+                                How this impacts Firewalls
+If your Pod network is an overlay network,source and destination POD IP addresses are encapsulated so they can transverse the underlay network.This means only firewalls that open packets and inspect the contents will be able to filter pod network and firewall solutions.
+With this in mind,if your Pod-to-Pod traffic has to transverse existing firewalls that don't perform deep packet inspection,it might be a better idea to choose a BGP pod network as they don't oscure Pod source and destination addresses.
