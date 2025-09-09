@@ -1,0 +1,106 @@
+From DAC to MAC: How Linux Access Controls Shape Kubernetes Security
+
+Security on Linux has always revolved around who can do what. Containers and Kubernetes didn’t invent new rules—they build on decades of Linux’s access control model. To really understand pod security, you need to understand the difference between DAC (Discretionary Access Control) and MAC (Mandatory Access Control).
+
+What is DAC?
+
+Discretionary Access Control is Linux’s default security model. Every file, directory, or process has an owner, and that owner (or root) decides who else can read, write, or execute it.
+
+The classic ls -l output—those rwxr-xr-x permission strings—are DAC in action. Combine that with user IDs (UIDs) and group IDs (GIDs), and you’ve got the Unix permission model.
+
+Example:
+
+-rw-r--r-- 1 alice devs  1204 Jan  1  notes.txt
+
+
+Here, Alice owns the file and can decide who else gets access.
+
+The problem? DAC trusts owners too much. If root wants to change permissions or grant access, nothing stops them. That makes DAC flexible, but risky in shared environments.
+
+What is MAC?
+
+Mandatory Access Control goes further. Instead of leaving security up to file owners, MAC enforces system-wide policies that even root must respect.
+
+Think of it as a security officer standing over root’s shoulder, saying:
+
+“Sure, you’re root, but the policy says you still can’t read this secret file.”
+
+Common Linux MAC systems include:
+
+SELinux (Security-Enhanced Linux): label-based policies.
+
+AppArmor: profile-based policies defining what binaries can do.
+
+seccomp: filters restricting which syscalls processes can invoke.
+
+MAC systems are stricter and harder to bypass. They minimize the blast radius if an attacker gains root inside a container.
+
+Why MAC Improves on DAC
+
+Where DAC says, “root decides”, MAC says, “policy decides.”
+
+DAC limitation: If an attacker breaks into a container as root, they can do almost anything the kernel allows.
+
+MAC improvement: Even if the attacker is root, SELinux/AppArmor/seccomp can block privilege escalation, prevent file access, or deny dangerous syscalls.
+
+This extra layer of non-negotiable policy is critical in containerized environments where many workloads share the same kernel.
+
+DAC, MAC, and Containers
+
+Containers rely heavily on both models:
+
+DAC inside containers:
+Each container still uses Linux UIDs, GIDs, and file permissions. Running as a non-root user (via runAsUser in Kubernetes securityContext) is a DAC-level security best practice.
+
+MAC across containers:
+Kubernetes integrates with MAC systems to enforce cluster-wide policies:
+
+AppArmor profiles can restrict what binaries in a pod can access.
+
+SELinux labels can prevent one pod from touching another’s files, even if both are root.
+
+seccomp profiles can block dangerous syscalls (like mount or ptrace).
+
+These are PodSecurity standards in action—Kubernetes “borrows” Linux’s MAC tools to lock down workloads.
+
+Putting It Together: Why This Matters
+
+In Kubernetes:
+
+DAC stops sloppy developers from leaving world-writable files lying around.
+
+MAC stops attackers from breaking out of containers or using root inside pods to harm the node.
+
+Here’s an example Kubernetes pod spec using both:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-pod
+spec:
+  securityContext:
+    runAsUser: 1000             # DAC: don’t run as root
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+  - name: app
+    image: myapp:latest
+    securityContext:
+      capabilities:
+        drop: ["ALL"]           # remove root-like powers
+      allowPrivilegeEscalation: false
+      seccompProfile:           # MAC: restrict syscalls
+        type: RuntimeDefault
+      apparmorProfile:          # MAC: restrict file/system actions
+        type: "localhost/myprofile"
+
+
+This pod uses DAC (non-root UID/GID) and MAC (seccomp/AppArmor) to layer protections.
+
+Conclusion
+
+Linux DAC gave us the foundation: owners, groups, and permissions. But in a multi-tenant, containerized world, DAC alone is too trusting. MAC systems like SELinux, AppArmor, and seccomp step in to enforce mandatory policies—even against root.
+
+Kubernetes pod security is really just Linux security applied at scale: DAC for day-to-day hygiene, MAC for guardrails no one can bypass. Together, they turn “root is all-powerful” into “root is still under supervision.”
+
+Would you like me to expand this into a two-part series (Part 1: Linux DAC vs MAC explained; Part 2: How Kubernetes leverages them with real-world pod hardening examples)? That way, one piece educates about the OS, the next shows hands-on YAML configs for readers.

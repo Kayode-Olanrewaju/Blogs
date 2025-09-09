@@ -1,0 +1,17 @@
+Centrality: Why Your Cluster (and Your Life) Needs a Center
+
+Centrality gets dismissed too quickly in tech circles. Everyone’s excited about decentralization—blockchains, federated services, peer-to-peer everything. Decentralization sounds cooler, like rebellion against the old mainframes. But when you peel back the hype, you notice something: the biggest, most reliable systems all have a strong center. And that center is what makes them scale, secure, and survive.
+
+Take Kubernetes. You can have a thousand worker nodes crunching workloads, but without the control plane—the API server, scheduler, controller manager—the whole cluster is just a bunch of confused machines spinning their wheels. The control plane doesn’t do all the work, it just makes sure the work gets to the right place. That’s centrality at its best: coordination without micromanagement.
+
+Or look at Linux itself. The systemd process (PID 1) is central—it bootstraps the whole operating system. You could try to avoid a central init, but then you’re left with chaos: services starting in random order, no unified logging, no control over dependencies. Centrality in Linux doesn’t mean “everything runs through one process”; it means there’s one anchor to kick everything off and keep it sane.
+
+Security works the same way. Imagine trying to secure a fleet of containers if each one had its own idea of authentication, policy, and audit. That’s a nightmare. Instead, you centralize: identity providers for login, policy engines like Kyverno or OPA to enforce rules across the cluster, logging pipelines to give you a single pane of glass. With centrality, you can harden once and apply everywhere. Without it, attackers feast on your weakest link.
+
+But here’s the catch: too much centrality is brittle. A dead control plane = dead cluster. A failed systemd = kernel panic. That’s why smart infrastructure couples central coordination with distributed execution: leaders exist, but they’re backed by redundancy and failover. That balance is where scalability and resilience meet.
+
+Funny thing is, life mirrors infra. If you try to “decentralize” every decision—never having a personal center—you drown in options. Do I work out now or later? Save money or spend it? Every node in your life makes its own choice, and you get nowhere. But when you define a central principle—your version of a control plane, like “I value health” or “I invest in long-term growth”—it guides decisions across all those nodes of daily life. Centrality, applied wisely, gives you clarity and security.
+
+In infra and in life, the center isn’t a bottleneck. It’s the compass. The art is making sure it coordinates without collapsing under its own weight. Galaxies orbit black holes, Linux boots from PID 1, clusters thrive on control planes—and you scale best when your decisions orbit your own core values.
+
+This version anchors itself in Linux (systemd), Kubernetes (control plane, policy engines), and infra practices (logging, identity providers)—then pivots to personal decision-making.
